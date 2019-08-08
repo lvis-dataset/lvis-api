@@ -2,8 +2,7 @@
 
 
 LVIS (pronounced ‘el-vis’): is a new dataset for Large Vocabulary Instance Segmentation.
-We collect more than 2 million high-quality instance segmentation masks for over 1200 entry-level object categories in 164k images. LVIS API enables reading and interacting with annotation files,
-visualizing annotations, and evaluating results.
+When complete, it will feature more than 2 million high-quality instance segmentation masks for over 1200 entry-level object categories in 164k images. The LVIS API enables reading and interacting with annotation files, visualizing annotations, and evaluating results.
 
 <img src="images/examples.png"/>
 
@@ -16,12 +15,25 @@ You can setup a virtual environment and then install `lvisapi` using pip:
 
 ```bash
 python3 -m venv env               # Create a virtual environment
-source env/bin/activate           # Activate virtual environment'
+source env/bin/activate           # Activate virtual environment
 
-# install COCO API
+# install COCO API. COCO API requires numpy to install. Ensure that you installed numpy.
 pip install 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
 # install LVIS API
 pip install lvis
+# Work for a while ...
+deactivate  # Exit virtual environment
+```
+
+You can also clone the repo first and then do the following steps inside the repo:
+```bash
+python3 -m venv env               # Create a virtual environment
+source env/bin/activate           # Activate virtual environment
+
+# install COCO API. COCO API requires numpy to install. Ensure that you installed numpy.
+pip install 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
+# install LVIS API
+pip install .
 # test if the installation was correct
 python test.py
 # Work for a while ...
@@ -29,13 +41,12 @@ deactivate  # Exit virtual environment
 ```
 ## Citing LVIS
 
-If you find this code/data useful in your research then please cite our [paper](http://www.lvisdataset.org/img/lvis.pdf):
+If you find this code/data useful in your research then please cite our [paper](http://www.lvisdataset.org/assets/lvis_v0.5.pdf):
 ```
 @inproceedings{gupta2019lvis,
-  title={LVIS: A Dataset for Large Vocabulary Instance Segmentation},
+  title={{LVIS}: A Dataset for Large Vocabulary Instance Segmentation},
   author={Gupta, Agrim and Dollar, Piotr and Girshick, Ross},
-  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition},
-  pages={5356--5364},
+  booktitle={Proceedings of the {IEEE} Conference on Computer Vision and Pattern Recognition},
   year={2019}
 }
 ```
