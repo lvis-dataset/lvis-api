@@ -87,7 +87,7 @@ class LVISEval:
         # presence or absence in an image.
         img_data = self.lvis_gt.load_imgs(ids=self.params.img_ids)
         # per image map of categories not present in image
-        img_nl = {d["id"]: d["not_exhaustive_category_ids"] for d in img_data}
+        img_nl = {d["id"]: d["neg_category_ids"] for d in img_data}
         # per image list of categories present in image
         img_pl = defaultdict(set)
         for ann in gts:
