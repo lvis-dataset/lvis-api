@@ -41,7 +41,7 @@ deactivate  # Exit virtual environment
 ```
 ## Citing LVIS
 
-If you find this code/data useful in your research then please cite our [paper](http://www.lvisdataset.org/assets/lvis_v0.5.pdf):
+If you find this code/data useful in your research then please cite our [paper](https://arxiv.org/abs/1908.03195):
 ```
 @inproceedings{gupta2019lvis,
   title={{LVIS}: A Dataset for Large Vocabulary Instance Segmentation},
