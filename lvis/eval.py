@@ -520,10 +520,10 @@ class Params:
         # np.arange causes trouble.  the data point on arange is slightly
         # larger than the true value
         self.iou_thrs = np.linspace(
-            0.5, 0.95, np.round((0.95 - 0.5) / 0.05) + 1, endpoint=True
+            0.5, 0.95, int(np.round((0.95 - 0.5) / 0.05)) + 1, endpoint=True
         )
         self.rec_thrs = np.linspace(
-            0.0, 1.00, np.round((1.00 - 0.0) / 0.01) + 1, endpoint=True
+            0.0, 1.00, int(np.round((1.00 - 0.0) / 0.01)) + 1, endpoint=True
         )
         self.max_dets = 300
         self.area_rng = [
