@@ -6,9 +6,9 @@ When complete, it will feature more than 2 million high-quality instance segment
 
 <img src="images/examples.png"/>
 
-## LVIS v0.5
+## LVIS v1.0
 
-LVIS v0.5 marks the halfway point in data collection. For this release, we have annotated an additional 82k images (57k train, 20k test, 5k val). Release v0.5 is publicly available at [LVIS website](http://www.lvisdataset.org) and will be used in the first LVIS Challenge to be held in conjunction with the COCO Workshop at ICCV 2019.
+For this release, we have annotated 159,623 images (100k train, 20k val, 20k test-dev, 20k test-challenge). Release v1.0 is publicly available at [LVIS website](http://www.lvisdataset.org) and will be used in the second LVIS Challenge to be held at Joint COCO and LVIS Workshop at ECCV 2020.
 
 ## Setup
 You can setup a virtual environment and then install `lvisapi` using pip:
