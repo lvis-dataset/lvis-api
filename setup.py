@@ -27,7 +27,7 @@ if __name__ == "__main__":
         name=DISTNAME,
         install_requires=REQUIREMENTS,
         packages=setuptools.find_packages(),
-        version="0.5.2",
+        version="0.5.3",
         description=DESCRIPTION,
         long_description=DOCLINES,
         long_description_content_type='text/markdown',
