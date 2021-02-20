@@ -93,7 +93,7 @@ class LVISEval:
         for ann in gts:
             img_pl[ann["image_id"]].add(ann["category_id"])
         # per image map of categoires which have missing gt. For these
-        # categories we don't penalize the detector for flase positives.
+        # categories we don't penalize the detector for false positives.
         self.img_nel = {d["id"]: d["not_exhaustive_category_ids"] for d in img_data}
 
         for dt in dts:
