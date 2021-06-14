@@ -11,20 +11,28 @@ import os
 import logging
 from collections import defaultdict
 from urllib.request import urlretrieve
+import time
 
 import pycocotools.mask as mask_utils
 
+from lvis.boundary_utils import augment_annotations_with_boundary_multi_core
+
 
 class LVIS:
-    def __init__(self, annotation_path):
+    def __init__(self, annotation_path, get_boundary=False, dilation_ratio=0.02):
         """Class for reading and visualizing annotations.
         Args:
             annotation_path (str): location of annotation file
+            get_boundary (bool): whether to precompute mask boundary before evaluation
+            dilation_ratio (float): ratio to calculate dilation = dilation_ratio * image_diagonal
         """
         self.logger = logging.getLogger(__name__)
         self.logger.info("Loading annotations.")
 
         self.dataset = self._load_json(annotation_path)
+
+        self.get_boundary = get_boundary
+        self.dilation_ratio = dilation_ratio
 
         assert (
             type(self.dataset) == dict
@@ -45,12 +53,22 @@ class LVIS:
         self.cats = {}
         self.imgs = {}
 
+        for img in self.dataset["images"]:
+            self.imgs[img["id"]] = img
+        
+        if self.get_boundary:
+            # add `boundary` to annotation
+            self.logger.info('Adding `boundary` to annotation.')
+            tic = time.time()
+            self.dataset["annotations"] = augment_annotations_with_boundary_multi_core(self.dataset["annotations"],
+                                                                                       self.ann_to_mask,
+                                                                                       dilation_ratio=self.dilation_ratio)
+
+            self.logger.info('`boundary` added! (t={:0.2f}s)'.format(time.time()- tic))
+
         for ann in self.dataset["annotations"]:
             self.img_ann_map[ann["image_id"]].append(ann)
             self.anns[ann["id"]] = ann
-
-        for img in self.dataset["images"]:
-            self.imgs[img["id"]] = img
 
         for cat in self.dataset["categories"]:
             self.cats[cat["id"]] = cat

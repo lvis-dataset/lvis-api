@@ -12,18 +12,21 @@ import pycocotools.mask as mask_utils
 
 
 class LVISEval:
-    def __init__(self, lvis_gt, lvis_dt, iou_type="segm"):
+    def __init__(self, lvis_gt, lvis_dt, iou_type="segm", dilation_ratio=0.02):
         """Constructor for LVISEval.
         Args:
             lvis_gt (LVIS class instance, or str containing path of annotation file)
             lvis_dt (LVISResult class instance, or str containing path of result file,
             or list of dict)
             iou_type (str): segm or bbox evaluation
+            dilation_ratio (float): ratio to calculate dilation = dilation_ratio * image_diagonal
         """
         self.logger = logging.getLogger(__name__)
 
-        if iou_type not in ["bbox", "segm"]:
+        if iou_type not in ["bbox", "segm", "boundary"]:
             raise ValueError("iou_type: {} is not supported.".format(iou_type))
+
+        self.use_boundary_iou = iou_type == "boundary"
 
         if isinstance(lvis_gt, LVIS):
             self.lvis_gt = lvis_gt
@@ -38,6 +41,21 @@ class LVISEval:
             self.lvis_dt = LVISResults(self.lvis_gt, lvis_dt)
         else:
             raise TypeError("Unsupported type {} of lvis_dt.".format(lvis_dt))
+
+        # Precompute boundary.
+        if self.use_boundary_iou:
+            if not self.lvis_gt.get_boundary:
+                self.lvis_gt.get_boundary = self.use_boundary_iou
+                self.lvis_gt.dilation_ratio = dilation_ratio
+                self.lvis_gt._create_index()
+            else:
+                assert self.lvis_gt.dilation_ratio == dilation_ratio, "Dilation ratio not consistent"
+            if not self.lvis_dt.get_boundary:
+                self.lvis_dt.get_boundary = self.use_boundary_iou
+                self.lvis_dt.dilation_ratio = dilation_ratio
+                self.lvis_dt._create_index()
+            else:
+                assert self.lvis_gt.dilation_ratio == dilation_ratio, "Dilation ratio not consistent"
 
         # per-image per-category evaluation results
         self.eval_imgs = defaultdict(list)
@@ -67,8 +85,8 @@ class LVISEval:
         dts = self.lvis_dt.load_anns(
             self.lvis_dt.get_ann_ids(img_ids=self.params.img_ids, cat_ids=cat_ids)
         )
-        # convert ground truth to mask if iou_type == 'segm'
-        if self.params.iou_type == "segm":
+        # convert ground truth to mask if iou_type == 'segm' or 'boundary'
+        if self.params.iou_type == "segm" or self.params.iou_type == "boundary":
             self._to_mask(gts, self.lvis_gt)
             self._to_mask(dts, self.lvis_dt)
 
@@ -180,15 +198,43 @@ class LVISEval:
             ann_type = "segmentation"
         elif self.params.iou_type == "bbox":
             ann_type = "bbox"
+        elif self.params.iou_type == "boundary":
+            # We need to compute both mask and boundary iou
+            ann_type = None
         else:
             raise ValueError("Unknown iou_type for iou computation.")
-        gt = [g[ann_type] for g in gt]
-        dt = [d[ann_type] for d in dt]
 
-        # compute iou between each dt and gt region
-        # will return array of shape len(dt), len(gt)
-        ious = mask_utils.iou(dt, gt, iscrowd)
-        return ious
+        if ann_type is not None:
+            gt = [g[ann_type] for g in gt]
+            dt = [d[ann_type] for d in dt]
+            # compute iou between each dt and gt region
+            # will return array of shape len(dt), len(gt)
+            ious = mask_utils.iou(dt, gt, iscrowd)
+            return ious
+        else:
+            # combine mask and boundary iou
+            # Mask
+            gt_m = [g["segmentation"] for g in gt]
+            dt_m = [d["segmentation"] for d in dt]
+            # Boundary
+            gt_b = [g["boundary"] for g in gt]
+            dt_b = [d["boundary"] for d in dt]
+            # compute iou between each dt and gt region
+            # will return array of shape len(dt), len(gt)
+            mask_ious = mask_utils.iou(dt_m, gt_m, iscrowd)
+            boundary_ious = mask_utils.iou(dt_b, gt_b, iscrowd)
+            # combine mask and boundary iou
+            mask_ious = np.array(mask_ious)
+            boundary_ious = np.array(boundary_ious)
+            iscrowd = np.array(iscrowd)
+            ious = mask_ious
+            if len(gt) and len(dt):
+                # keep "mask iou" for crowd annotation
+                ious[:, iscrowd == 0] = np.minimum(mask_ious[:, iscrowd == 0], boundary_ious[:, iscrowd == 0])
+            else:
+                # corner case, one or both sets are empty
+                ious = np.minimum(mask_ious, boundary_ious)
+            return ious
 
     def evaluate_img(self, img_id, cat_id, area_rng):
         """Perform evaluation for single category and image."""

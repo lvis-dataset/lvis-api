@@ -19,6 +19,8 @@ source env/bin/activate           # Activate virtual environment
 
 # install COCO API. COCO API requires numpy to install. Ensure that you installed numpy.
 pip install 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
+# install OpenCV (optional if you already have OpenCV installed)
+pip install -U opencv-python
 # install LVIS API
 pip install lvis
 # Work for a while ...
@@ -32,6 +34,8 @@ source env/bin/activate           # Activate virtual environment
 
 # install COCO API. COCO API requires numpy to install. Ensure that you installed numpy.
 pip install 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
+# install OpenCV (optional if you already have OpenCV installed)
+pip install -U opencv-python
 # install LVIS API
 pip install .
 # test if the installation was correct
