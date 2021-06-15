@@ -44,14 +44,14 @@ class LVISEval:
 
         # Precompute boundary.
         if self.use_boundary_iou:
-            if not self.lvis_gt.get_boundary:
-                self.lvis_gt.get_boundary = self.use_boundary_iou
+            if not self.lvis_gt.precompute_boundary:
+                self.lvis_gt.precompute_boundary = self.use_boundary_iou
                 self.lvis_gt.dilation_ratio = dilation_ratio
                 self.lvis_gt._create_index()
             else:
                 assert self.lvis_gt.dilation_ratio == dilation_ratio, "Dilation ratio not consistent"
-            if not self.lvis_dt.get_boundary:
-                self.lvis_dt.get_boundary = self.use_boundary_iou
+            if not self.lvis_dt.precompute_boundary:
+                self.lvis_dt.precompute_boundary = self.use_boundary_iou
                 self.lvis_dt.dilation_ratio = dilation_ratio
                 self.lvis_dt._create_index()
             else:
