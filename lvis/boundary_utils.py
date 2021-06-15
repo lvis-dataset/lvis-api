@@ -1,8 +1,11 @@
-import multiprocessing
-
 import cv2
+import logging
+import multiprocessing
 import numpy as np
+
 import pycocotools.mask as mask_utils
+
+logger = logging.getLogger(__name__)
 
 
 # General util function to get the boundary of a binary mask.
@@ -46,7 +49,7 @@ def augment_annotations_with_boundary_single_core(proc_id, annotations, ann_to_m
 def augment_annotations_with_boundary_multi_core(annotations, ann_to_mask, dilation_ratio=0.02):
     cpu_num = multiprocessing.cpu_count()
     annotations_split = np.array_split(annotations, cpu_num)
-    print("Number of cores: {}, annotations per core: {}".format(cpu_num, len(annotations_split[0])))
+    logger.info("Number of cores: {}, annotations per core: {}".format(cpu_num, len(annotations_split[0])))
     workers = multiprocessing.Pool(processes=cpu_num)
     processes = []
 
