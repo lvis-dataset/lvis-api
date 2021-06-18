@@ -7,7 +7,7 @@ import pycocotools.mask as mask_utils
 
 
 class LVISResults(LVIS):
-    def __init__(self, lvis_gt, results, max_dets=300):
+    def __init__(self, lvis_gt, results, max_dets=300, precompute_boundary=False, dilation_ratio=0.02):
         """Constructor for LVIS results.
         Args:
             lvis_gt (LVIS class instance, or str containing path of
@@ -15,13 +15,19 @@ class LVISResults(LVIS):
             results (str containing path of result file or a list of dicts)
             max_dets (int):  max number of detections per image. The official
             value of max_dets for LVIS is 300.
+            precompute_boundary (bool): whether to precompute mask boundary before evaluation
+            dilation_ratio (float): ratio to calculate dilation = dilation_ratio * image_diagonal
         """
         if isinstance(lvis_gt, LVIS):
             self.dataset = deepcopy(lvis_gt.dataset)
+            precompute_boundary = lvis_gt.precompute_boundary
         elif isinstance(lvis_gt, str):
             self.dataset = self._load_json(lvis_gt)
         else:
             raise TypeError("Unsupported type {} of lvis_gt.".format(lvis_gt))
+        
+        self.precompute_boundary = precompute_boundary
+        self.dilation_ratio = dilation_ratio
 
         self.logger = logging.getLogger(__name__)
         self.logger.info("Loading and preparing results.")
