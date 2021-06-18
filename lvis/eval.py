@@ -495,7 +495,8 @@ class LVISEval:
         if not self.eval:
             raise RuntimeError("Please run accumulate() first.")
 
-        max_dets = self.params.max_dets
+        max_dets_im = self.params.max_dets
+        max_dets_cat = self.params.max_dets_per_cat
 
         self.results["AP"]   = self._summarize('ap')
         self.results["AP50"] = self._summarize('ap', iou_thr=0.50)
@@ -507,11 +508,18 @@ class LVISEval:
         self.results["APc"]  = self._summarize('ap', freq_group_idx=1)
         self.results["APf"]  = self._summarize('ap', freq_group_idx=2)
 
-        key = "AR@{}".format(max_dets)
+        # If max dets/cat is specified, update key to include both dets/im and dets/cat.
+        if max_dets_cat < 0:
+            key_suffix = max_dets_im
+        elif max_dets_im < 0:
+            key_suffix = "{}/cat".format(max_dets_cat)
+        else:  # Both max dets/im and max dets/cat specified
+            key_suffix = "{}/im,{}/cat".format(max_dets_im, max_dets_cat)
+        key = "AR@{}".format(key_suffix)
         self.results[key] = self._summarize('ar')
 
         for area_rng in ["small", "medium", "large"]:
-            key = "AR{}@{}".format(area_rng[0], max_dets)
+            key = "AR{}@{}".format(area_rng[0], key_suffix)
             self.results[key] = self._summarize('ar', area_rng=area_rng)
 
     def run(self):
@@ -521,10 +529,17 @@ class LVISEval:
         self.summarize()
 
     def print_results(self):
-        template = " {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} catIds={:>3s}] = {:0.3f}"
+        template = " {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={} catIds={:>3s}] = {:0.3f}"
 
         for key, value in self.results.items():
-            max_dets = self.params.max_dets
+            max_dets_im = self.params.max_dets
+            max_dets_cat = self.params.max_dets_per_cat
+            if max_dets_cat < 0:
+                max_dets_str = str(max_dets_im)
+            elif max_dets_im < 0:
+                max_dets_str = "{}/cat".format(max_dets_cat)
+            else:
+                max_dets_str = "{}/im,{}/cat".format(max_dets_im, max_dets_cat)
             if "AP" in key:
                 title = "Average Precision"
                 _type = "(AP)"
@@ -550,7 +565,7 @@ class LVISEval:
             else:
                 area_rng = "all"
 
-            print(template.format(title, _type, iou, area_rng, max_dets, cat_group_name, value))
+            print(template.format(title, _type, iou, area_rng, max_dets_str, cat_group_name, value))
 
     def get_results(self):
         if not self.results:
@@ -571,7 +586,8 @@ class Params:
         self.rec_thrs = np.linspace(
             0.0, 1.00, int(np.round((1.00 - 0.0) / 0.01)) + 1, endpoint=True
         )
-        self.max_dets = 300
+        self.max_dets = 300  # Max detections per image
+        self.max_dets_per_cat = -1  # Max detections per category
         self.area_rng = [
             [0 ** 2, 1e5 ** 2],
             [0 ** 2, 32 ** 2],
