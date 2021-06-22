@@ -535,7 +535,7 @@ class LVISEval:
             max_dets_im = self.params.max_dets
             max_dets_cat = self.params.max_dets_per_cat
             if max_dets_cat < 0:
-                max_dets_str = str(max_dets_im)
+                max_dets_str = "{:>3d}".format(max_dets_im)
             elif max_dets_im < 0:
                 max_dets_str = "{}/cat".format(max_dets_cat)
             else:

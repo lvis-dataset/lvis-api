@@ -11,7 +11,7 @@ class LVISResults(LVIS):
         self,
         lvis_gt,
         results,
-        max_dets_per_class=-1,
+        max_dets_per_cat=-1,
         max_dets_per_im=300,
         precompute_boundary=False,
         dilation_ratio=0.02,
@@ -21,7 +21,7 @@ class LVISResults(LVIS):
             lvis_gt (LVIS class instance, or str containing path of
             annotation file)
             results (str containing path of result file or a list of dicts)
-            max_dets_per_class (int):  max number of detections per class. The
+            max_dets_per_cat (int):  max number of detections per category. The
                 official value for the current version of the LVIS API is
                 infinite (i.e., -1).  The official value for the 2021 LVIS
                 challenge is 10,000.
@@ -58,8 +58,8 @@ class LVISResults(LVIS):
 
         if max_dets_per_im >= 0:
             result_anns = self.limit_dets_per_image(result_anns, max_dets_per_im)
-        if max_dets_per_class >= 0:
-            result_anns = self.limit_dets_per_class(result_anns, max_dets_per_class)
+        if max_dets_per_cat >= 0:
+            result_anns = self.limit_dets_per_cat(result_anns, max_dets_per_cat)
 
         if "bbox" in result_anns[0]:
             for id, ann in enumerate(result_anns):
@@ -92,7 +92,7 @@ class LVISResults(LVIS):
             set(img_ids_in_result) & set(self.get_img_ids())
         ), "Results do not correspond to current LVIS set."
 
-    def limit_dets_per_class(self, anns, max_dets):
+    def limit_dets_per_cat(self, anns, max_dets):
         by_cat = defaultdict(list)
         for ann in anns:
             by_cat[ann["category_id"]].append(ann)
@@ -106,8 +106,9 @@ class LVISResults(LVIS):
             )
         if fewer_dets_cats:
             self.logger.warning(
-                f"{len(fewer_dets_cats)} classes had less than {max_dets} detections!\n"
-                f"Outputting {max_dets} detections for each class will improve AP "
+                f"{len(fewer_dets_cats)} categories had less than {max_dets} "
+                f"detections!\n"
+                f"Outputting {max_dets} detections for each category will improve AP "
                 f"further."
             )
         return results
