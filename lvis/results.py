@@ -58,6 +58,8 @@ class LVISResults(LVIS):
 
         if max_dets_per_im >= 0:
             result_anns = self.limit_dets_per_image(result_anns, max_dets_per_im)
+        self.max_dets_per_im = max_dets_per_im
+        self.max_dets_per_cat = max_dets_per_cat
         if max_dets_per_cat >= 0:
             result_anns = self.limit_dets_per_cat(result_anns, max_dets_per_cat)
 

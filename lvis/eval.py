@@ -46,6 +46,15 @@ class LVISEval:
 
         if isinstance(lvis_dt, LVISResults):
             self.lvis_dt = lvis_dt
+            if mode == "challenge2021":
+                assert self.lvis_dt.max_dets_per_im == -1, (
+                    "mode='challenge2021' specified with LVISResults object "
+                    "containing incorrect max_dets_per_im (must be -1)."
+                )
+                assert self.lvis_dt.max_dets_per_cat == 10000, (
+                    "mode='challenge2021' specified with LVISResults object "
+                    "containing incorrect max_dets_per_cat (must be 10000)."
+                )
         elif isinstance(lvis_dt, (str, list)):
             if mode == "default":
                 self.lvis_dt = LVISResults(self.lvis_gt, lvis_dt)
