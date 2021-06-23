@@ -7,14 +7,28 @@ import pycocotools.mask as mask_utils
 
 
 class LVISResults(LVIS):
-    def __init__(self, lvis_gt, results, max_dets=300, precompute_boundary=False, dilation_ratio=0.02):
+    def __init__(
+        self,
+        lvis_gt,
+        results,
+        max_dets_per_cat=-1,
+        max_dets_per_im=300,
+        precompute_boundary=False,
+        dilation_ratio=0.02,
+    ):
         """Constructor for LVIS results.
         Args:
             lvis_gt (LVIS class instance, or str containing path of
             annotation file)
             results (str containing path of result file or a list of dicts)
-            max_dets (int):  max number of detections per image. The official
-            value of max_dets for LVIS is 300.
+            max_dets_per_cat (int):  max number of detections per category. The
+                official value for the current version of the LVIS API is
+                infinite (i.e., -1).  The official value for the 2021 LVIS
+                challenge is 10,000.
+            max_dets_per_im (int):  max number of detections per image. The
+                official value for the current version of the LVIS API is 300.
+                The official value for the 2021 LVIS challenge is infinite
+                (i.e., -1).
             precompute_boundary (bool): whether to precompute mask boundary before evaluation
             dilation_ratio (float): ratio to calculate dilation = dilation_ratio * image_diagonal
         """
@@ -25,7 +39,7 @@ class LVISResults(LVIS):
             self.dataset = self._load_json(lvis_gt)
         else:
             raise TypeError("Unsupported type {} of lvis_gt.".format(lvis_gt))
-        
+
         self.precompute_boundary = precompute_boundary
         self.dilation_ratio = dilation_ratio
 
@@ -42,8 +56,12 @@ class LVISResults(LVIS):
 
         assert isinstance(result_anns, list), "results is not a list."
 
-        if max_dets >= 0:
-            result_anns = self.limit_dets_per_image(result_anns, max_dets)
+        if max_dets_per_im >= 0:
+            result_anns = self.limit_dets_per_image(result_anns, max_dets_per_im)
+        self.max_dets_per_im = max_dets_per_im
+        self.max_dets_per_cat = max_dets_per_cat
+        if max_dets_per_cat >= 0:
+            result_anns = self.limit_dets_per_cat(result_anns, max_dets_per_cat)
 
         if "bbox" in result_anns[0]:
             for id, ann in enumerate(result_anns):
@@ -75,6 +93,27 @@ class LVISResults(LVIS):
         assert set(img_ids_in_result) == (
             set(img_ids_in_result) & set(self.get_img_ids())
         ), "Results do not correspond to current LVIS set."
+
+    def limit_dets_per_cat(self, anns, max_dets):
+        by_cat = defaultdict(list)
+        for ann in anns:
+            by_cat[ann["category_id"]].append(ann)
+        results = []
+        fewer_dets_cats = set()
+        for cat, cat_anns in by_cat.items():
+            if len(cat_anns) < max_dets:
+                fewer_dets_cats.add(cat)
+            results.extend(
+                sorted(cat_anns, key=lambda x: x["score"], reverse=True)[:max_dets]
+            )
+        if fewer_dets_cats:
+            self.logger.warning(
+                f"{len(fewer_dets_cats)} categories had less than {max_dets} "
+                f"detections!\n"
+                f"Outputting {max_dets} detections for each category will improve AP "
+                f"further."
+            )
+        return results
 
     def limit_dets_per_image(self, anns, max_dets):
         img_ann = defaultdict(list)

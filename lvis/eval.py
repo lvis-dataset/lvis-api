@@ -12,19 +12,28 @@ import pycocotools.mask as mask_utils
 
 
 class LVISEval:
-    def __init__(self, lvis_gt, lvis_dt, iou_type="segm", dilation_ratio=0.02):
+    def __init__(self, lvis_gt, lvis_dt, iou_type="segm", mode="default", dilation_ratio=0.02):
         """Constructor for LVISEval.
         Args:
             lvis_gt (LVIS class instance, or str containing path of annotation file)
             lvis_dt (LVISResult class instance, or str containing path of result file,
             or list of dict)
-            iou_type (str): segm or bbox evaluation
+            iou_type (str): segm, bbox, or boundary evaluation. Ignored if `mode` is set to
+                'challenge2021'.
             dilation_ratio (float): ratio to calculate dilation = dilation_ratio * image_diagonal
+            mode (str): Either 'default' or 'challenge2021'. Specifying 'challenge2021'
+                uses iou_type=boundary and limits detections to 10,000 per class
+                (instead of 300 per image).
         """
         self.logger = logging.getLogger(__name__)
 
         if iou_type not in ["bbox", "segm", "boundary"]:
             raise ValueError("iou_type: {} is not supported.".format(iou_type))
+
+        if mode == "challenge2021":
+            iou_type = "boundary"
+        elif mode != "default":
+            raise ValueError("Unexpected mode: {}".format(mode))
 
         self.use_boundary_iou = iou_type == "boundary"
 
@@ -37,8 +46,25 @@ class LVISEval:
 
         if isinstance(lvis_dt, LVISResults):
             self.lvis_dt = lvis_dt
+            if mode == "challenge2021":
+                assert self.lvis_dt.max_dets_per_im == -1, (
+                    "mode='challenge2021' specified with LVISResults object "
+                    "containing incorrect max_dets_per_im (must be -1)."
+                )
+                assert self.lvis_dt.max_dets_per_cat == 10000, (
+                    "mode='challenge2021' specified with LVISResults object "
+                    "containing incorrect max_dets_per_cat (must be 10000)."
+                )
         elif isinstance(lvis_dt, (str, list)):
-            self.lvis_dt = LVISResults(self.lvis_gt, lvis_dt)
+            if mode == "default":
+                self.lvis_dt = LVISResults(self.lvis_gt, lvis_dt)
+            elif mode == "challenge2021":
+                self.lvis_dt = LVISResults(
+                    self.lvis_gt,
+                    lvis_dt,
+                    max_dets_per_cat=10000,
+                    max_dets_per_im=-1
+                )
         else:
             raise TypeError("Unsupported type {} of lvis_dt.".format(lvis_dt))
 
@@ -65,6 +91,9 @@ class LVISEval:
         self.params = Params(iou_type=iou_type)  # parameters
         self.results = OrderedDict()
         self.ious = {}  # ious between all gts and dts
+        if mode == "challenge2021":
+            self.params.max_dets = -1
+            self.params.max_dets_per_cat = 10000
 
         self.params.img_ids = sorted(self.lvis_gt.get_img_ids())
         self.params.cat_ids = sorted(self.lvis_gt.get_cat_ids())
@@ -495,7 +524,8 @@ class LVISEval:
         if not self.eval:
             raise RuntimeError("Please run accumulate() first.")
 
-        max_dets = self.params.max_dets
+        max_dets_im = self.params.max_dets
+        max_dets_cat = self.params.max_dets_per_cat
 
         self.results["AP"]   = self._summarize('ap')
         self.results["AP50"] = self._summarize('ap', iou_thr=0.50)
@@ -507,11 +537,18 @@ class LVISEval:
         self.results["APc"]  = self._summarize('ap', freq_group_idx=1)
         self.results["APf"]  = self._summarize('ap', freq_group_idx=2)
 
-        key = "AR@{}".format(max_dets)
+        # If max dets/cat is specified, update key to include both dets/im and dets/cat.
+        if max_dets_cat < 0:
+            key_suffix = max_dets_im
+        elif max_dets_im < 0:
+            key_suffix = "{}/cat".format(max_dets_cat)
+        else:  # Both max dets/im and max dets/cat specified
+            key_suffix = "{}/im,{}/cat".format(max_dets_im, max_dets_cat)
+        key = "AR@{}".format(key_suffix)
         self.results[key] = self._summarize('ar')
 
         for area_rng in ["small", "medium", "large"]:
-            key = "AR{}@{}".format(area_rng[0], max_dets)
+            key = "AR{}@{}".format(area_rng[0], key_suffix)
             self.results[key] = self._summarize('ar', area_rng=area_rng)
 
     def run(self):
@@ -521,10 +558,17 @@ class LVISEval:
         self.summarize()
 
     def print_results(self):
-        template = " {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} catIds={:>3s}] = {:0.3f}"
+        template = " {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={} catIds={:>3s}] = {:0.3f}"
 
         for key, value in self.results.items():
-            max_dets = self.params.max_dets
+            max_dets_im = self.params.max_dets
+            max_dets_cat = self.params.max_dets_per_cat
+            if max_dets_cat < 0:
+                max_dets_str = "{:>3d}".format(max_dets_im)
+            elif max_dets_im < 0:
+                max_dets_str = "{}/cat".format(max_dets_cat)
+            else:
+                max_dets_str = "{}/im,{}/cat".format(max_dets_im, max_dets_cat)
             if "AP" in key:
                 title = "Average Precision"
                 _type = "(AP)"
@@ -550,7 +594,7 @@ class LVISEval:
             else:
                 area_rng = "all"
 
-            print(template.format(title, _type, iou, area_rng, max_dets, cat_group_name, value))
+            print(template.format(title, _type, iou, area_rng, max_dets_str, cat_group_name, value))
 
     def get_results(self):
         if not self.results:
@@ -571,7 +615,8 @@ class Params:
         self.rec_thrs = np.linspace(
             0.0, 1.00, int(np.round((1.00 - 0.0) / 0.01)) + 1, endpoint=True
         )
-        self.max_dets = 300
+        self.max_dets = 300  # Max detections per image
+        self.max_dets_per_cat = -1  # Max detections per category
         self.area_rng = [
             [0 ** 2, 1e5 ** 2],
             [0 ** 2, 32 ** 2],
