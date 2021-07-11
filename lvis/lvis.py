@@ -61,7 +61,7 @@ class LVIS:
             self.logger.info('Adding `boundary` to annotation.')
             tic = time.time()
             self.dataset["annotations"] = augment_annotations_with_boundary_multi_core(self.dataset["annotations"],
-                                                                                       self.ann_to_mask,
+                                                                                       self.imgs,
                                                                                        dilation_ratio=self.dilation_ratio)
 
             self.logger.info('`boundary` added! (t={:0.2f}s)'.format(time.time()- tic))
