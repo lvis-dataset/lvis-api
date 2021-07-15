@@ -15,6 +15,7 @@ class LVISResults(LVIS):
         max_dets_per_im=300,
         precompute_boundary=False,
         dilation_ratio=0.02,
+        max_cpu_num=80,
     ):
         """Constructor for LVIS results.
         Args:
@@ -31,6 +32,7 @@ class LVISResults(LVIS):
                 (i.e., -1).
             precompute_boundary (bool): whether to precompute mask boundary before evaluation
             dilation_ratio (float): ratio to calculate dilation = dilation_ratio * image_diagonal
+            max_cpu_num (int): max number of cpu cores to compute mask boundary before evaluation
         """
         if isinstance(lvis_gt, LVIS):
             self.dataset = deepcopy(lvis_gt.dataset)
@@ -42,6 +44,7 @@ class LVISResults(LVIS):
 
         self.precompute_boundary = precompute_boundary
         self.dilation_ratio = dilation_ratio
+        self.max_cpu_num = max_cpu_num
 
         self.logger = logging.getLogger(__name__)
         self.logger.info("Loading and preparing results.")

@@ -7,13 +7,12 @@ import pycocotools.mask as mask_utils
 
 logger = logging.getLogger(__name__)
 
-MAX_CPU_NUM = 80
-
 
 def ann_to_rle(ann, imgs):
     """Convert annotation which can be polygons, uncompressed RLE to RLE.
     Args:
         ann (dict) : annotation object
+        imgs (dict) : image dicts
 
     Returns:
         ann (rle)
@@ -40,6 +39,7 @@ def ann_to_mask(ann, imgs):
     to binary mask.
     Args:
         ann (dict) : annotation object
+        imgs (dict) : image dicts
 
     Returns:
         binary mask (numpy 2D array)
@@ -86,8 +86,8 @@ def augment_annotations_with_boundary_single_core(proc_id, annotations, imgs, di
     return new_annotations
 
 
-def augment_annotations_with_boundary_multi_core(annotations, imgs, dilation_ratio=0.02):
-    cpu_num = min(multiprocessing.cpu_count(), MAX_CPU_NUM)
+def augment_annotations_with_boundary_multi_core(annotations, imgs, dilation_ratio=0.02, max_cpu_num=80):
+    cpu_num = min(multiprocessing.cpu_count(), max_cpu_num)
     annotations_split = np.array_split(annotations, cpu_num)
     logger.info("Number of cores: {}, annotations per core: {}".format(cpu_num, len(annotations_split[0])))
     workers = multiprocessing.Pool(processes=cpu_num)

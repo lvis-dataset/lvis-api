@@ -19,12 +19,13 @@ from lvis.boundary_utils import augment_annotations_with_boundary_multi_core
 
 
 class LVIS:
-    def __init__(self, annotation_path, precompute_boundary=False, dilation_ratio=0.02):
+    def __init__(self, annotation_path, precompute_boundary=False, dilation_ratio=0.02, max_cpu_num=80):
         """Class for reading and visualizing annotations.
         Args:
             annotation_path (str): location of annotation file
             precompute_boundary (bool): whether to precompute mask boundary before evaluation
             dilation_ratio (float): ratio to calculate dilation = dilation_ratio * image_diagonal
+            max_cpu_num (int): max number of cpu cores to compute mask boundary before evaluation
         """
         self.logger = logging.getLogger(__name__)
         self.logger.info("Loading annotations.")
@@ -33,6 +34,7 @@ class LVIS:
 
         self.precompute_boundary = precompute_boundary
         self.dilation_ratio = dilation_ratio
+        self.max_cpu_num = max_cpu_num
 
         assert (
             type(self.dataset) == dict
@@ -62,7 +64,8 @@ class LVIS:
             tic = time.time()
             self.dataset["annotations"] = augment_annotations_with_boundary_multi_core(self.dataset["annotations"],
                                                                                        self.imgs,
-                                                                                       dilation_ratio=self.dilation_ratio)
+                                                                                       dilation_ratio=self.dilation_ratio,
+                                                                                       max_cpu_num=self.max_cpu_num)
 
             self.logger.info('`boundary` added! (t={:0.2f}s)'.format(time.time()- tic))
 
@@ -185,39 +188,3 @@ class LVIS:
             file_name = os.path.join(save_dir, img["coco_url"].split("/")[-1])
             if not os.path.exists(file_name):
                 urlretrieve(img["coco_url"], file_name)
-
-    def ann_to_rle(self, ann):
-        """Convert annotation which can be polygons, uncompressed RLE to RLE.
-        Args:
-            ann (dict) : annotation object
-
-        Returns:
-            ann (rle)
-        """
-        img_data = self.imgs[ann["image_id"]]
-        h, w = img_data["height"], img_data["width"]
-        segm = ann["segmentation"]
-        if isinstance(segm, list):
-            # polygon -- a single object might consist of multiple parts
-            # we merge all parts into one mask rle code
-            rles = mask_utils.frPyObjects(segm, h, w)
-            rle = mask_utils.merge(rles)
-        elif isinstance(segm["counts"], list):
-            # uncompressed RLE
-            rle = mask_utils.frPyObjects(segm, h, w)
-        else:
-            # rle
-            rle = ann["segmentation"]
-        return rle
-
-    def ann_to_mask(self, ann):
-        """Convert annotation which can be polygons, uncompressed RLE, or RLE
-        to binary mask.
-        Args:
-            ann (dict) : annotation object
-
-        Returns:
-            binary mask (numpy 2D array)
-        """
-        rle = self.ann_to_rle(ann)
-        return mask_utils.decode(rle)

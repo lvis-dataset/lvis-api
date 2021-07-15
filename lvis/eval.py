@@ -7,12 +7,13 @@ import numpy as np
 
 from lvis.lvis import LVIS
 from lvis.results import LVISResults
+from lvis.boundary_utils import ann_to_rle
 
 import pycocotools.mask as mask_utils
 
 
 class LVISEval:
-    def __init__(self, lvis_gt, lvis_dt, iou_type="segm", mode="default", dilation_ratio=0.02):
+    def __init__(self, lvis_gt, lvis_dt, iou_type="segm", mode="default", dilation_ratio=0.02, max_cpu_num=80):
         """Constructor for LVISEval.
         Args:
             lvis_gt (LVIS class instance, or str containing path of annotation file)
@@ -20,10 +21,11 @@ class LVISEval:
             or list of dict)
             iou_type (str): segm, bbox, or boundary evaluation. Ignored if `mode` is set to
                 'challenge2021'.
-            dilation_ratio (float): ratio to calculate dilation = dilation_ratio * image_diagonal
             mode (str): Either 'default' or 'challenge2021'. Specifying 'challenge2021'
                 uses iou_type=boundary and limits detections to 10,000 per class
                 (instead of 300 per image).
+            dilation_ratio (float): ratio to calculate dilation = dilation_ratio * image_diagonal
+            max_cpu_num (int): max number of cpu cores to compute mask boundary before evaluation
         """
         self.logger = logging.getLogger(__name__)
 
@@ -73,12 +75,14 @@ class LVISEval:
             if not self.lvis_gt.precompute_boundary:
                 self.lvis_gt.precompute_boundary = self.use_boundary_iou
                 self.lvis_gt.dilation_ratio = dilation_ratio
+                self.lvis_gt.max_cpu_num = max_cpu_num
                 self.lvis_gt._create_index()
             else:
                 assert self.lvis_gt.dilation_ratio == dilation_ratio, "Dilation ratio not consistent"
             if not self.lvis_dt.precompute_boundary:
                 self.lvis_dt.precompute_boundary = self.use_boundary_iou
                 self.lvis_dt.dilation_ratio = dilation_ratio
+                self.lvis_dt.max_cpu_num = max_cpu_num
                 self.lvis_dt._create_index()
             else:
                 assert self.lvis_gt.dilation_ratio == dilation_ratio, "Dilation ratio not consistent"
@@ -100,7 +104,7 @@ class LVISEval:
 
     def _to_mask(self, anns, lvis):
         for ann in anns:
-            rle = lvis.ann_to_rle(ann)
+            rle = ann_to_rle(ann, lvis.imgs)
             ann["segmentation"] = rle
 
     def _prepare(self):
