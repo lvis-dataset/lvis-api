@@ -155,12 +155,12 @@ class LVISEval:
             gt = [
                 _ann
                 for _cat_id in self.params.cat_ids
-                for _ann in self._gts[img_id, cat_id]
+                for _ann in self._gts[img_id, _cat_id]
             ]
             dt = [
                 _ann
                 for _cat_id in self.params.cat_ids
-                for _ann in self._dts[img_id, cat_id]
+                for _ann in self._dts[img_id, _cat_id]
             ]
         return gt, dt
 
