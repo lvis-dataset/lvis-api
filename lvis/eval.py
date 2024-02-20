@@ -358,7 +358,7 @@ class LVISEval:
                 tps = np.logical_and(dt_m, np.logical_not(dt_ig))
                 fps = np.logical_and(np.logical_not(dt_m), np.logical_not(dt_ig))
 
-                tp_sum = np.cumsum(tps, axis=1).astype(dtype=float)
+                tp_sum = np.cumsum(tps, axis=1).astype(dtype=float)
                 fp_sum = np.cumsum(fps, axis=1).astype(dtype=float)
 
                 dt_pointers[cat_idx][area_idx] = {
